@@ -1,0 +1,55 @@
+version: "3.7"
+
+services:
+  postgres:
+    image: "postgres:9.6.17"
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - "POSTGRES_DB=keycloak"
+      - "POSTGRES_USER=[db-username]"
+      - "POSTGRES_PASSWORD=[db-password]"
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - keycloak-network
+  keycloak:
+    image: "quay.io/keycloak/keycloak:latest"
+    container_name: keycloak
+    restart: unless-stopped
+    environment:
+      - "DB_VENDOR=POSTGRES"
+      - "DB_ADDR=postgres"
+      - "DB_DATABASE=keycloak"
+      - "DB_USER=[db-username]"
+      - "DB_PASSWORD=[db-password]"
+      - "KEYCLOAK_USER=admin"
+      - "KEYCLOAK_PASSWORD=[keycloak-password]"
+      - "PROXY_ADDRESS_FORWARDING=true"
+    expose:
+      - 8080
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{any:.*}`)"
+      - "traefik.http.routers.http-catchall.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.routers.keycloak.tls.certresolver=le"
+      - "traefik.http.routers.keycloak.rule=Host(`[instance-url]`)"
+    depends_on:
+      - postgres
+    networks:
+      - keycloak-network
+      - traefik-proxy
+
+volumes:
+  postgres_data:
+
+networks:
+  traefik-proxy:
+    external: true
+  keycloak-network:
