@@ -10,11 +10,11 @@ services:
       - "POSTGRES_USER=[db-username]"
       - "POSTGRES_PASSWORD=[db-password]"
     volumes:
-      - "./postgres_data:/var/lib/postgresql/data"
+      - "postgres_data:/var/lib/postgresql/data"
     labels:
       - "traefik.enable=false"
     networks:
-      - external_net
+      - keycloak-network
   keycloak:
     image: "quay.io/keycloak/keycloak:latest"
     container_name: keycloak
@@ -28,10 +28,10 @@ services:
       - "KEYCLOAK_USER=admin"
       - "KEYCLOAK_PASSWORD=[keycloak-password]"
       - "PROXY_ADDRESS_FORWARDING=true"
-#    ports:
-#      - "8666:8080"
-#    expose:
-#      - 8666
+    ports:
+      - "8666:8080"
+    expose:
+      - 8666
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.http-catchall.entrypoints=web"
@@ -45,13 +45,14 @@ services:
     depends_on:
       - postgres
     networks:
-      - external_net
+      - keycloak-network
+      - traefik-proxy
 
-#volumes:
-#  postgres_data:
+volumes:
+  postgres_data:
 
 networks:
-  external_net:
-    external:
-      name: external-example
-
+  traefik-proxy:
+    name: external-example
+    external: true
+  keycloak-network:
